@@ -6,7 +6,7 @@ Course website for CMM / BIOM 262  Winter 2020 - Quantitative Methods in Genetic
 
 ***Note:*** 01/23/2020 class will be in Liebow Auditorium
 
-[Syllabus](link_to_syllabus)
+[Syllabus](https://github.com/biom262/cmm262-2020/blob/master/CMM262_Syllabus-2020.ipynb)
 
 | Week | Date | Topic | Lecturer | Links | Homework |
 |----------|----------|-------|------- |------|------|
@@ -21,3 +21,4 @@ Course website for CMM / BIOM 262  Winter 2020 - Quantitative Methods in Genetic
 | 8 | 02/25/2020 | **Module 8: GWAS** | Graham McVicker | TBA | None |
 | 9 | 03/03/2020 | **Module 9: Population Genetics** | Nicholas Schork <br> Ondrej Libiger | TBA | TBA |
 | 10 | 03/10/2020 | **Module 10: Variant Calling** | Olivier Harismendy | TBA | None |
+|-| 03/17/2020 | **Office hours for take home final**| TAs  | TBA | None | 
