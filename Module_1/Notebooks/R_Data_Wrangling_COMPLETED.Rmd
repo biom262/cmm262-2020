@@ -1,0 +1,253 @@
+---
+title: "Into R Data Wrangling"
+output:
+  html_document:
+    df_print: paged
+---
+
+In R we have the capabilites to quickly disect and reshape the data and tie this to graphical outputs. This section will go over some of the basic concepts of subsetting and data manipulation and give a few examples of how to plot these outputs to get an idea about what the data looks like.
+
+Subsetting:
+
+Subsetting has three types of operators and six types of subsetting
+
+Let's first look at subset operators: [, [[, $
+
+```{r}
+my.df <- data.frame(x = 1:3, y = c('a', 'b', 'c'))
+my.other.df <- data.frame(x = 5:7, y = c('x', 'y', 'z'))
+my.col.combined.df <- cbind(my.df, my.other.df)
+
+# subset operators: [, [[, $
+my.df[1,]
+my.df$x
+my.df[[1]]
+
+my.col.combined.df
+
+```
+
+```{r}
+# subset types
+# 1. using positive integers
+my.col.combined.df[c(1,3),]
+
+# 2. using negative integers 
+my.col.combined.df[c(-1,-3),]
+
+# 3. using logical Vectors
+my.col.combined.df[c(TRUE, FALSE, TRUE),]
+my.col.combined.df[TRUE,]
+dim(my.col.combined.df)
+
+```
+
+
+```{r}
+# subset types continued
+# 4. Nothing, used especially with matrices, arrays and data frame
+my.col.combined.df
+
+# 5. Character vectors, if names are present
+my.df['x']
+```
+```{r}
+my.df
+```
+
+
+One of the most widely used subsetting types used is logical subsetting. Given a provided condition elements can be extracted
+
+```{r}
+# want to extract rows where column x is greater or equal to two (2)
+my.df[my.df$x >= 2,]
+
+# What actually happens is your condition creates a logical vector which is used for extracion
+my.df[my.df$x >= 2,]
+```
+
+```{r}
+# it is also possible to provide multiple conditions
+
+# this AND that: &
+my.df[my.df$x >= 2 & my.df$y == 'c', ]
+
+# this OR that: |
+my.df[my.df$x >= 2 | my.df$y == 'a', ]
+
+```
+
+
+```{r}
+# when have a regular vector we use the command 'which' to do the exact same
+some.vector <- c(11:20)
+some.vector[which(some.vector > 18)]
+```
+
+## Things to be careful about
+
+When combining data frames the type across columns have to be the same (combining atomic vectors)
+
+```{r}
+
+my.df <- data.frame(x = 1:3, y = c('a', 'b', 'c'), stringsAsFactors = FALSE)
+my.diff.df <- data.frame(x = c('x', 'y', 'z'), y = 5:7, stringsAsFactors = FALSE)
+
+# combining by column works as long as dimensions match up
+my.col.comb <- cbind(my.df, my.diff.df)
+
+# combining by row will cause an error
+rbind(my.df, my.diff.df)
+
+```
+
+```{r}
+# trying to row-combine data frames with different column names also won't work
+my.df2 <- my.df
+colnames(my.df2) <- c('x2', 'y2')
+my.df2
+
+```
+
+
+If working in a notebook, factors are not displayed as such (it will do so in an interactive R session)
+
+```{r}
+# each of the strings in column 'y' is actually a factor
+
+```
+
+While the above does not seem particularly concerning it can create headaches when plotting or using functions which use factors. Workarounds are to retroactively change the class or to not have factors to begin with
+
+```{r}
+# 1. change in retrospect
+# create copy of my.df to demonstrate differences
+
+my.new.df <- my.df
+my.new.df$y <- as.character(my.new.df$y)
+
+# 2. avoid having factors from the start
+my.df <- data.frame(x = 1:3, y = c('a', 'b', 'c'), stringsAsFactors = FALSE)
+
+```
+
+## Sanity checks and quick plotting
+
+Whenever we get data we want to be able to quickly assess the situation; does our data make sense?
+
+Let's do this with the RNA seq counts from our experiment you. First, take a minute and think about what you would expect (number of genes, number of replicates etc.)
+
+```{r}
+# reading in data
+counts <- read.csv('~/work/cmm262-2020/Module_1/Data/tardbp_counts_with_length.csv', header = TRUE, stringsAsFactors = FALSE)
+
+# check type
+typeof(counts)
+
+# check dimensions
+dim(counts)
+
+# check first few lines
+head(counts)
+
+```
+
+Checking correlation between replicates 
+
+```{r}
+plot(x = counts$NT_shRNA_hepg2_rep1, y = counts$NT_shRNA_hepg2_rep2, main = 'Control correlation', xlab = 'NT_shRNA_hepg2_rep1', ylab = 'NT_shRNA_hepg2_rep2')
+
+```
+
+```{r}
+# the above is not too informative so instead plot on a log-scale (log() coresponds to the natural log in R)
+plot(x = log(counts$NT_shRNA_hepg2_rep1 + 1), y = log(counts$NT_shRNA_hepg2_rep2 + 1 ), main = 'Log control correlation', xlab = 'log NT_shRNA_hepg2_rep1', ylab = 'log NT_shRNA_hepg2_rep2')
+
+```
+
+```{r}
+# the above is already much better, but we would now like to quantify how closely they resemble one another
+# to do so we use the 'r-squared' metric (goodness of fit measure between 0 and 1)
+# because we are trying to determine a linear relationship we use a linear model: lm(Y ~ X)
+# since we are working in log-space we might have to add a pseudo-count
+
+fit <- lm(log(counts$NT_shRNA_hepg2_rep1 + 1) ~ log(counts$NT_shRNA_hepg2_rep2 + 1))
+plot(x = log(counts$NT_shRNA_hepg2_rep1 + 1), y = log(counts$NT_shRNA_hepg2_rep2 + 1 ), main = 'Log control correlation', xlab = 'log NT_shRNA_hepg2_rep1', ylab = 'log NT_shRNA_hepg2_rep2')
+abline(fit, col = 'red')
+legend('topleft', legend = paste('R2 is :', format(summary(fit)$adj.r.squared,digits = 4)))
+
+s <- summary(fit)
+```
+
+Now let's compare across experiments (what do we expect?)
+
+```{r}
+fit2 <- lm(log(counts$TARDBP_shRNA_hepg2_rep1 + 1) ~ log(counts$NT_shRNA_hepg2_rep1 + 1))
+plot(x = log(counts$TARDBP_shRNA_hepg2_rep1 + 1), y = log(counts$NT_shRNA_hepg2_rep1 + 1),
+     main = 'Cross condition correlation', xlab = 'log TARDBP_shRNA_hepg2_rep1',
+     ylab = 'log NT_shRNA_hepg2_rep1')
+abline(fit2, col = 'red')
+legend('topleft', legend = paste('R2 is :', format(summary(fit2)$adj.r.squared, digits = 4)) )
+```
+
+
+```{r}
+# we can also look at the distribution of the counts themselves by using a histogram
+hist(log(counts$TARDBP_shRNA_hepg2_rep1 + 1), main = 'Count distribution', xlab = 'TARDBP_shRNA_hepg2_rep1', ylab = 'Frequency', breaks = 500)
+
+hist(log(counts$NT_shRNA_hepg2_rep1 + 1), main = 'Count distribution', xlab = 'NT_shRNA_hepg2_rep1', ylab = 'Frequency', breaks = 500)
+
+```
+
+Let's see what the general features are of counts across all samples:
+
+```{r}
+summary(rowSums(counts[,c(3:6)]))
+
+```
+
+
+For a gene having a combined count of over 7 million seems a bit high. How many such high-count cases are there?
+
+```{r}
+high.count <- 500000
+length(which(rowSums(counts[,c(3:6)]) > high.count))
+
+```
+
+```{r}
+# how would you remove these rows?
+filtered.counts <- counts[-which(rowSums(counts[,c(3:6)]) > high.count),]
+dim(counts)
+dim(filtered.counts)
+
+```
+
+Assuming the above was our last filtering step and every subsequent analysis performed would be using 'filtered.counts' we want to save the dataframe.
+
+There are different options for saving data but we will use a built in function to store our data as a .csv file
+
+```{r}
+# we specifically set row.names to false. See what happens if you omit this flag
+write.csv(filtered.counts, file = 'example_filtering.csv', row.names = F)
+getwd()
+
+```
+
+Maybe we also want to show our PI how nice our replicates look so let's save the correlation plot of the filtered data
+
+```{r}
+# 1. specify to save in desired format
+# 2. plot desired figure
+# 3. specify that plotting is done
+pdf('scatter_plot.pdf')
+
+fit <- lm(log(counts$NT_shRNA_hepg2_rep1 + 1) ~ log(counts$NT_shRNA_hepg2_rep2 + 1))
+plot(x = log(counts$NT_shRNA_hepg2_rep1 + 1), y = log(counts$NT_shRNA_hepg2_rep2 + 1 ), main = 'Log control correlation', xlab = 'log NT_shRNA_hepg2_rep1', ylab = 'log NT_shRNA_hepg2_rep2')
+abline(fit, col = 'red')
+legend('topleft', legend = paste('R2 is :', format(summary(fit)$adj.r.squared,digits = 4)))
+
+dev.off()
+
+```
+
