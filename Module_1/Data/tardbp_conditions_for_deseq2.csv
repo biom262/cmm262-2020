@@ -1,0 +1,5 @@
+,condition
+NT_shRNA_hepg2_rep1,control
+NT_shRNA_hepg2_rep2,control
+TARDBP_shRNA_hepg2_rep1,knockdown
+TARDBP_shRNA_hepg2_rep2,knockdown
