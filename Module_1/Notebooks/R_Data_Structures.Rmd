@@ -1,0 +1,152 @@
+---
+title: "Intro R Data Structures"
+output: html_notebook
+---
+
+# R: a quick overview
+
+R is a widely used programming language and as such has many resources available. If you're looking to do some data wrangling chances are someone before you has already had to do the same thing you're about to do and maybe even written a package for those specific operations so it's usually worth searching around for the specific analysis or visualization you need to do. 
+
+[RStudio](https://www.rstudio.com/) is a quite user-friendly interface and has some great capabilities when plotting and debugging.
+
+RStudio also provides several [cheatsheets](https://www.rstudio.com/resources/cheatsheets) for some of the most commonly used functionalities.
+
+Additionally, when you know the name of a function you can directly access the documentation for said function by entering: ?functionOfInterest.
+
+The power of R lies both in it's statistical capabilities as well as in the various plotting options to visualize the data. Higher level visualizations are usually performed using [ggplot2](http://ggplot2.org/) which has an enormous range of possibilities. You can find some examples in the [R Graph Gallery](http://www.r-graph-gallery.com/)
+
+Great annotated heatmaps using [pheatmap](https://davetang.org/muse/2018/05/15/making-a-heatmap-in-r-with-the-pheatmap-package/)! 
+
+Here we will dive into the most used 4 data structures of R. Knowing about these structures will help you get a better understanding of the language which in turn improves your programming skills.
+ 
+## Getting started
+
+```{r}
+# R can be used to perform simple operations:
+
+# addition
+
+# subtraction
+
+# multiplication
+
+# division
+
+# raise a number to a power
+
+# take a root
+
+
+```
+
+## R data types 
+
+```{r}
+# character: "a", "swc"
+
+# numeric: 2, 15.5
+
+# integer: 2L (the L tells R to store this as an integer)
+
+# logical: TRUE, FALSE
+
+# complex: 1+4i (complex numbers with real and imaginary parts)
+```
+
+## Data Structure: Vector, Atomic
+
+Atomic vectors can only contain one type of data: logical, integer, double, character
+
+```{r}
+# atomic vectors are one dimensional, initialize with c()
+
+
+# they take only one type of data
+
+# you can measure their length
+```
+
+```{r}
+# vectorized operations
+
+```
+
+## Data Structure: Vector, Lists
+
+Stores different elements, where each element can be of a different type
+
+```{r}
+# initialize with list()
+
+# can name each element
+
+# access specific list elements
+
+```
+
+
+Lists are made up of atomic vectors or other lists
+
+```{r}
+
+```
+
+## Data Structure: Attributes
+
+Attributes are not as important in the beginning but good to know about. They are used to store metadata.
+
+```{r}
+# Names
+
+
+```
+
+```{r}
+# Factors 
+
+```
+
+## Data Structure: Matrices / Arrays
+
+These multi-dimensional data structures can only hold one type of data (usually numeric). A Matrix is a sub-category of Arrays and only has two dimensions while Arrays can have more
+
+```{r}
+# dimensions are shown as: #rows #columns 
+```
+
+```{r}
+# accessing matrix row
+
+# accessing matric column
+```
+
+
+## Data Structure: Data Frame
+
+One of the the most commonly used data structures.
+
+```{r}
+
+```
+
+Under the hood, data frames are lists and can be accessed as such
+
+```{r}
+
+```
+
+But they also have matrix-like properties: they possess rows and columns
+
+```{r}
+
+```
+
+
+This mixed property allows it to be flexible. Additionally two data frames can be combined if the dimensions match up.
+
+```{r}
+# combine by columns
+
+# combine by rows
+
+```

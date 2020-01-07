@@ -1,0 +1,180 @@
+---
+title: "Into R Data Wrangling"
+output: html_notebook
+---
+
+In R we have the capabilites to quickly disect and reshape the data and tie this to graphical outputs. This section will go over some of the basic concepts of subsetting and data manipulation and give a few examples of how to plot these outputs to get an idea about what the data looks like.
+
+Subsetting:
+
+Subsetting has three types of operators and six types of subsetting
+
+Let's first look at subset operators: [, [[, $
+
+```{r}
+# subset operators: [, [[, $
+
+```
+
+```{r}
+# subset types
+# 1. using positive integers
+
+# 2. using negative integers 
+
+# 3. using logical Vectors
+
+```
+
+
+```{r}
+# subset types continued
+# 4. Nothing, used especially with matrices, arrays and data frame
+
+
+# 5. Zero, returns 0-length vector. Mainly used in generating test data (output is: numeric(0))
+
+
+# 6. Character vectors, if names are present
+
+```
+
+One of the most widely used subsetting types used is logical subsetting. Given a provided condition elements can be extracted
+
+```{r}
+# want to extract rows where column x is greater or equal to two (2)
+
+# What actually happens is your condition creates a logical vector which is used for extracion
+
+```
+
+```{r}
+# it is also possible to provide multiple conditions
+
+# this AND that: &
+
+# this OR that: |
+
+
+```
+
+
+```{r}
+# when have a regular vector we use the command 'which' to do the exact same
+```
+
+## Things to be careful about
+
+When combining data frames the type across columns have to be the same (combining atomic vectors)
+
+```{r}
+# combining by column works as long as dimensions match up
+
+# combining by row will cause an error
+
+```
+
+```{r}
+# trying to row-combine data frames with different column names also won't work
+
+```
+
+
+If working in a notebook, factors are not displayed as such (it will do so in an interactive R session)
+
+```{r}
+# each of the strings in column 'y' is actually a factor
+
+```
+
+While the above does not seem particularly concerning it can create headaches when plotting or using functions which use factors. Workarounds are to retroactively change the class or to not have factors to begin with
+
+```{r}
+# 1. change in retrospect
+# create copy of my.df to demonstrate differences
+
+# 2. avoid having factors from the start
+
+```
+
+## Sanity checks and quick plotting
+
+Whenever we get data we want to be able to quickly assess the situation; does our data make sense?
+
+Let's do this with the RNA seq counts from our experiment you. First, take a minute and think about what you would expect (number of genes, number of replicates etc.)
+
+```{r}
+# reading in data
+
+# check type
+
+# check dimensions
+
+# check first few lines
+
+```
+
+Checking correlation between replicates 
+
+```{r}
+
+
+```
+
+```{r}
+# the above is not too informative so instead plot on a log-scale (log() coresponds to the natural log in R)
+
+
+```
+
+```{r}
+# the above is already much better, but we would now like to quantify how closely they resemble one another
+# to do so we use the 'r-squared' metric (goodness of fit measure between 0 and 1)
+# because we are trying to determine a linear relationship we use a linear model: lm(Y ~ X)
+# since we are working in log-space we might have to add a pseudo-count
+```
+
+Now let's compare across experiments (what do we expect?)
+
+```{r}
+# we can also look at the distribution of the counts themselves by using a histogram
+
+
+```
+
+Let's see what the general features are of counts across all samples:
+
+```{r}
+
+```
+
+
+For a gene having a combined count of over 7 million seems a bit high. How many such high-count cases are there?
+
+```{r}
+
+```
+
+```{r}
+# how would you remove these rows?
+
+```
+
+Assuming the above was our last filtering step and every subsequent analysis performed would be using 'filtered.counts' we want to save the dataframe.
+
+There are different options for saving data but we will use a built in function to store our data as a .csv file
+
+```{r}
+# we specifically set row.names to false. See what happens if you omit this flag
+```
+
+Maybe we also want to show our PI how nice our replicates look so let's save the correlation plot of the filtered data
+
+```{r}
+# 1. specify to save in desired format
+# 2. plot desired figure
+# 3. specify that plotting is done
+
+
+```
+
