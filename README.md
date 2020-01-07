@@ -1,3 +1,5 @@
+[![](https://img.shields.io/badge/Slack-Join-blue.svg)](https://join.slack.com/t/cmm262-2020/shared_invite/enQtODg5NjM5MjEwNTYwLTFlOWI1ZDc2M2E3YjQ2NjJjZTU1OTM5YTk3N2ZhNmZkZDlkMTdlYjNmNzBmY2ZmZjI2OTU5MzNmYzE5NWJmNjc)
+
 # cmm262-2020
 Course website for CMM / BIOM 262  Winter 2020 - Quantitative Methods in Genetics and Genomics
 
