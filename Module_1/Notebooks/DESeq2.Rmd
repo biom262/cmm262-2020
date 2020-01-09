@@ -1,0 +1,102 @@
+---
+title: "DESeq2"
+output:
+  html_document:
+    df_print: paged
+---
+#DESeq2 analysis
+
+Load DESeq2 and the data to be analyzed
+
+```{r}
+# load DESeq2
+
+# load additional packages used for result exploration:
+
+
+# because DESeq2 works with matrices and uses row names as identifiers we load our data accordingly
+
+```
+
+```{r}
+# we also need our condition identifiers so DESeq2 know what to compare against what
+
+```
+
+Using our featurecounts processed data we don"t have to do any data normalization since DESeq2 will do that for us. Instead we only have to format our data so DESeq2 can analyze it. More analysis details can be found in the [example page](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html) of DESeq2.
+
+First, we will define experimental parameters. If using a counts matrix, we will use the following function, where countData is equal to our counts matrix ("counts"), colData is equal to our conditions, and design accounts for how we wish to model our effect (in this case, by the "condition" or treatment with a specific shRNA). The factor variable, in this case condition, needs to be columns of coldata:
+
+```{r}
+
+
+```
+
+Let's use some built in DESeq2 functions to do a little more QC. Let"s graph our individual samples using Principal Component Analysis (PCA). This allows us to assess overall variance within our experiment by defining principal components. This plot shows our samples in a 2D plane spanned by their first two principal components. This is useful for visualizing the overall effect of experimental covariates, in this case shRNA treatment, as well as batch effects that may confound findings. To address batch issues look into [ComBat](https://rdrr.io/bioc/sva/man/ComBat.html) For a more thorough explanation of PCA, please refer to [this notebook]() in the Tutorials folder.
+
+```{r}
+# applying regularized log transformation (removes mean-variance dependence)
+
+
+```
+
+As we can see, 99% of variance at the gene level is attibutable to PC1, along which our experimental conditions cluster separately. Thus, we have reasonably high confidence that out treatment is the main source of variance in our experiment.
+
+Similarly, this can also be visualized via heatmap, which summarizes sample-to-sample similarities via hierarchical clustering:
+
+```{r}
+
+```
+
+We then execute DESeq2 on our dataset:
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+Taken directly from the documentation: results() extracts a result table from a DESeq analysis giving base means across samples, log2 fold changes, standard errors, test statistics, p-values and adjusted p-values
+
+The function plotMA allows us to plot the log2 fold changes over the mean of normalized counts for all the samples in dds. Points are colored red if the adjusted p value (alpha) is less than 0.1. Points which fall out of the window are plotted as open triangles pointing either up or down. The window can be widened using the ylim argument
+
+
+```{r}
+
+```
+
+
+We can also get a more stringent view of our differentially expressed genes by rerunning result on dds with an additional argument alpha. This allows us to be more discerning with our adjusted p value threshold, in this case allowing us to decrease the cutoff to alpha=0.05
+
+```{r}
+
+```
+
+
+We also care about the effect size, which in this case is the log2(fold change) of the gene. A good way to visualize this is with a volcano plot. 
+
+```{r}
+
+
+```
+
+
+Extract out just genes you consider significantly enriched.
+
+```{r}
+
+```
+
+## OPTIONAL:
+
+Convert ENSEMBL gene IDs to HSNC Gene Symbols
+
+```{r}
+
+```
+
+
+
+
