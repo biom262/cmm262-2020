@@ -7,7 +7,5 @@ dependencies:
   - python=3
   - bzip2
   - fastqc
-  - star
-  - samtools
 prefix: /Users/Clarence/miniconda3/envs/cmm262-rnaseq
 
