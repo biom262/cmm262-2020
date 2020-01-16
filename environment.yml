@@ -1,0 +1,11 @@
+name: cmm262-rnaseq
+channels:
+  - defaults
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3
+  - bzip2
+  - fastqc
+prefix: /Users/Clarence/miniconda3/envs/cmm262-rnaseq
+
