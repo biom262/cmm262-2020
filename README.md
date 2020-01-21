@@ -15,8 +15,8 @@ Course website for CMM / BIOM 262  Winter 2020 - Quantitative Methods in Genetic
 |----------|----------|-------|------- |------|------|
 |0 | Before 01/07/2020 | **Module 0: Pre-Class Setup**| You | [Module 0](https://github.com/biom262/cmm262-2020/tree/master/Module_0) | [Generate SSH Keys](https://github.com/biom262/cmm262-2020/blob/master/Module_0/0_Generate_Public_Private_key_mac.ipynb) |
 | 1 | 01/07/2020 | **Module 1: Intro to R and Python, RNA-seq** | Daniela Nachmanson | [Module 1](https://github.com/biom262/cmm262-2020/tree/master/Module_1) | [RNA-Seq Analysis](https://github.com/biom262/cmm262-2020/tree/master/Module_1/Homeworks/Homework1.pdf) |
-| 2 | 01/14/2020 | **Module 2: Unix, TSCC, RNA-seq** | Daniela Nachmanson | [Module 2](https://github.com/biom262/cmm262-2020/tree/master/Module_2) | TBA |
-| 3 | 01/21/2020 | **Module 3: Statistics** | Scott Rifkin | TBA | TBA |
+| 2 | 01/14/2020 | **Module 2: Unix, TSCC, RNA-seq** | Daniela Nachmanson | [Module 2](https://github.com/biom262/cmm262-2020/tree/master/Module_2) | None |
+| 3 | 01/21/2020 | **Module 3: Statistics** | Scott Rifkin | [Module 3](https://github.com/biom262/cmm262-2020/tree/master/Module_3) | TBA |
 | 4 | 01/28/2020 | **Module 4: Single Cell Analysis** | Robert Morey | TBA | None |
 | 5 | 02/04/2020 | **Module 5: ChIP-seq & chromatin** | Alon Goren | TBA | TBA |
 | 6 | 02/11/2020 | **Module 6: GSEA** | Pablo Tamayo <br> William Kim | TBA | None |
