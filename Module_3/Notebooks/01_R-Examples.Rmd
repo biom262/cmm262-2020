@@ -1,0 +1,182 @@
+---
+title: "R examples"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+## Making vectors
+```{r}
+# Generates a contiguous list of values 
+contiguous=2:10
+
+# Generates a vector of numbers, booleans, and characters
+vectorOfNumbers=c(43,6,2,45,2,8,3)
+vectorOfBooleans=c(T,F,T,T,F)
+vectorOfCharacterTypes=c('This','is','a','vector','with','character','types','as','components','.')
+
+# Generates an empty vector
+emptyVector=c()
+
+# Creates a vector of 12 zeros
+vectorOf12Zeros=numeric(12)
+```
+
+## Selecting a subset of a vector
+```{r}
+thirdElement=contiguous[3]
+thirdAndFifthElements=vectorOfNumbers[c(3,5)]
+allButThe4thElement=vectorOfCharacterTypes[-4]
+
+temp=5
+secondElementInAComplicatedButPotentiallyUsefulWay=vectorOfBooleans[temp-3]
+
+# In the next command, 
+# %% is the modulus operator,
+# length() returns the length of a vector,
+# which() returns positions where the vector is true
+elementsInEvenPositions=vectorOfNumbers[which((1:length(vectorOfNumbers))%%2==0)] 
+
+#Note - to understand what which() is doing, look at what the stuff inside it gives:
+firstPartOfStuffInsideWhich=(1:length(vectorOfNumbers))
+secondPartOfStuffInsideWhich=(1:length(vectorOfNumbers))%%2
+allStuffInsideWhich=(1:length(vectorOfNumbers))%%2==0
+```
+
+## Loop through a vector and print every element
+```{r}
+for (i in vectorOfCharcterTypes)
+{
+  print(i)
+}
+```
+
+## Do something 10 times using a for loop
+```{r}
+# To do this, use the vector 1:10 to drive the loop even if you don't actually use the numbers 1-10
+for (i in 1:10){
+  print('hi!') # or whatever you want to do 10 times
+}
+```
+
+## Create the vector 101:2001 using an empty initial vector and a for loop
+```{r}
+vector101to2001=c()
+for (i in 101:2001){
+  vector101to2001=c(vector101to2001,i)
+}
+```
+
+
+## Do different things on odd and even iterations of a loop. Use a for loop and an if-else statement. Note that if you only want to do something if [and not else] then don't include the else part
+```{r}
+for (i in 1:13){
+  if (i %%2==1){ # %% is the modulus operator
+    print('odd') # or whatever you want to do when i is odd
+  } else {
+    print('even') # or whatever you want to do when i is even
+  }
+}
+
+```
+
+
+## Calculate the 10th triangular number
+```{r}
+# Initialize a variable- otherwise R won't know what to do with the right side of the statement in the for loop [tri10+1] since it refers to tri10. Without initialization, tri10 won't exist and R will give you an error
+tri10=0
+# Do the calculation
+for (i in 1:10){
+  tri10=tri10+i
+}
+```
+
+## Make a function to calculate a triangular number
+```{r}
+# n is an argument/variable passed in.
+# this is used to represent which triangular number the function should calculate
+calculateTriangularNumber<-function(n) 
+{
+  triN=0
+  for (i in 1:n){
+    triN=triN+i
+  }
+  # the part above is nearly identical to the 10th triangular number example.  Just with a variable (n) instead of 10
+  
+  return(triN)  # send the result back to the line that called it
+}
+```
+
+## Use the function to calculate the 14th triangular number and store it in a variable
+```{r}
+tri14=calculateTriangularNumber(14)
+```
+
+## Take the numbers 11-30. Scramble them up without replacement and while keeping all 20.  Put them in a 4x5 array. Then add them up. Then print the answer
+```{r}
+numbersToAdd=11:30
+scrambled=sample(numbersToAdd,20,replace=F)
+grid=array(scrambled,dim=c(4,5))
+sumOfGrid=0
+for (i in 1:4){
+  for (j in 1:5){
+    sumOfGrid=sumOfGrid+grid[i,j]
+  }
+}
+print(sumOfGrid)
+```
+## Take the numbers 11-30. Randomly select 12 of them with replacement.  Put them in a 3x4 array. Add up one random column.  Then print the answer
+```{r}
+numbersToChooseFrom=11:30
+nToChoose=12
+chosen12=sample(numbersToChooseFrom,nToChoose,replace=T)
+grid=array(chosen12,dim=c(3,4))
+columnToAdd=sample(1:4,1)
+sumOfColumn=sum(grid[,columnToAdd])
+print(sumOfColumn)
+```
+
+## Make the above code into a function and then use replicate() to get 1000 instances of sumOfColumn. Then make a histogram of the result with 20 bins
+```{r}
+sumRandomColumn<-function(vectorToChooseFrom){
+  nToChoose=12
+  chosen12=sample(vectorToChooseFrom,nToChoose,replace=T)
+  grid=array(chosen12,dim=c(3,4))
+  columnToAdd=sample(1:4,1)
+  sumOfColumn=sum(grid[,columnToAdd])
+  return(sumOfColumn)
+}
+oneThousandReplicates=replicate(1000,sumRandomColumn(41:57))
+hist(oneThousandReplicates,20)
+```
+
+# R Programming Exercises
+```{r}
+# 1. Make a vector of numbers and store it in a variable. Be sure some of the numbers are greater than 3 and some less than 3.
+
+# 2. Extract a non-contiguous subset of your vector and store that in a variable
+
+# 3. Use the which() function to make a new vector with the positions of the elements of your vector that are greater than 3.
+
+# 4. Write a for loop that calculates the mean of your vector - don't use the mean() or sum() functions for this
+
+# 5. Make #4 into a function that takes a vector of numbers and input and returns the mean of the vector passed in [call the function myMean so that R doesn't confuse its built-in mean() function with yours]
+
+# 6. Write a for loop that calculates the mean of the elements that are greater than 3 in your vector.  
+
+# 7. Write a function that selects N numbers from the vector -100:100 at random and returns their mean [hint:  you can call your function from #5 as part of it!]
+
+# 8. Plot three distributions [plot them as histograms] that you get by calling #7 5000 times.  In the first one, N is 4. In the 2nd N is 16. In the 3rd, N is 64.  How are the widths of these three distributions related to each other?
+
+# 9. Write a function that does something to a vector of numbers and returns a single number back.  Inside the function must be at least one for loop and at least one if or if-else statement.  Be prepared to describe what your function does and how it works.
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
