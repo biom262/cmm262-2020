@@ -1,0 +1,17 @@
+<h5>Instructions/Explanations (scroll down or expand the window for more)</h5>
+
+This applet demonstrates hypothesis testing.  The <font style="background-color: #A292FE">purple</font> distribution is the null distribution, and the <font style="background-color: #F49816">orange</font> distribution is the hypothesized real population sampling distribution (the distribution you would get if you repeatedly sampled from the population and plotted the sample statistics). In reality we don't know what the actual parameter value is and so we don't know this sampling distribution. (A bootstrap distribution is an estimate of it, but the bootstrap distribution is centered around the sample statistic not the population parameter).<br><br>
+<font style="background-color: #FDDBF4"> <b>
+Currently, the real population parameter does not equal the null value</b></font><br/><br/>
+The <font style="background-color: #F49816">darker orange</font> represents the region of statistic values where the inference matches reality.  The <font style="background-color: #FFD38A">lighter orange</font> represents the region of statistic values where a false negative error would be made. The dashed <font style="background-color: #00CC33">green</font> line (or lines if you have checked both-tails) marks the statistic cutoff value that gives the specified <font style="background-color: #DDD7FC">significance level (or false alarm/type I error rate)</font>.<br/><br/>
+There are 2 possible outcomes when doing a hypothesis test - you either reject the null or do not reject it.  Whether that is good or bad depends on whether the real parameter value actually equals the null value.  In the scenario here, the real parameter value <u><font style="background-color: #FDDBF4">does not equal</font></u> the null value:<br/><br/>
+<font style="background-color: #F49816"> 
+<b>GOOD</b>: The real parameter value <b> does not equal</b> the null value and you decide that your data disagrees with with the null hypothesis and you reject it because your sample statistic falls to the right of the green line. This is also called the <b>power</b> of the hypothesis test (also the true positive rate). This is the fraction of the sampling distribution that is dark orange.</font>.<br/><br/>
+<font style="background-color: #FFD38A"> 
+<b>MISSED OPPORTUNITY</b>: The real parameter value <b> does not equal</b> the null value but you decide that your data is consistent/agrees with the null hypothesis - you fail to reject it because your sample statistic falls to the left of the green line. This is also called the Type II error rate or the false negative rate. This is the fraction of the alternative distribution that is light orange.</font><br/><br/>
+  <font style="background-color: #FFFFFF"> 
+
+- Move the sliders around to see how the rates of error change depending on where you set your significance level cutoff, your sample size, and what the actual (but, in reality, unknown!) real parameter value is (the slider called "Real parameter value"). <br/>- If you press the triangles, the applet will animate that slider.<br/>
+<br/><br/>
+<h8>This applet is derived from a java applet that can be found <a href ="http://intuitor.com/statistics/T1T2Errors.html" target="_blank">here</a></h8>
+
