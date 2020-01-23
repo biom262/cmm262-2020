@@ -1,0 +1,218 @@
+---
+title: "Stats Day 2 - NHANES and tidyverse"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+#### Load the libraries needed
+```{r}
+loadPackage<-function(package){ # package needs to be a string
+  # require() returns TRUE or FALSE depending on whether the package is not installed.  
+  # ! means 'not'
+  if (!require(package,character.only=T)){ 
+    install.packages(package,character.only=T)
+  }
+  library(package,character.only=T)
+}
+
+loadPackage('tidyr')
+loadPackage('plyr')
+loadPackage('dplyr') # if you are going to load both plyr and dplyr, load plyr 1st
+loadPackage('ggplot2')
+loadPackage('readr')
+loadPackage('magrittr')
+loadPackage('NHANES')
+
+# if this doesn't work, then use "Install" in the Rstudio window to install the packages and then just use library(package) e.g. library(dplyr) or click the box in front of the relevant package in the Packages tab
+```
+#### Load the NHANES dataset, look at it, and learn about it
+```{r}
+data('NHANES')
+View(NHANES)
+?NHANES
+
+# Note that the first three rows look identical - at least they all have the same ID.  Let's just choose unique rows
+NHANES=distinct(NHANES) # Note that this overwrites the original variable
+
+# For some reason, this doesn't remove all the duplicated IDs. It doesn't give the result we expect. Look at:
+max(table(NHANES$ID))
+
+View(filter(NHANES,ID==63149))
+# The PhysActiveDays column is different.  Not sure why this is, but it is an oddity about this dataset.
+# In real work, you'd have to investigate this and decide what to do about it.  For our purposes it doesn't matter, so we're going to ignore it.
+
+```
+
+
+#### Visualize some of the data
+```{r}
+ggplot(data=NHANES)+geom_violin(aes(x=HomeOwn,y=Pulse,fill=Gender))+scale_fill_manual(values=c('darkolivegreen','green'))
+
+```
+
+#### Do some data curation - select a categorical column and a quantitative column and then prune the categorical column down to 2 variables.  Make sure each case (row) has values [non-NA] for both columns
+
+```{r}
+# As an example, I will choose  physically active as the categorical variable and pulse as the quantitative variable.  You can find the names of these columns in the help(NHANES) info or by typing names(NHANES)
+
+# Note, look at the dplyr cheat sheet to remind yourself how these functions work and when column names need to be in quotes and when they don't:  https://github.com/rstudio/cheatsheets/raw/master/data-transformation.pdf
+
+# Select just those columns and then remove any row with an NA
+sub.NHANES=dplyr::select(NHANES,one_of(c('PhysActive','Pulse')))
+
+sub.NHANES = filter(sub.NHANES,!is.na(PhysActive) & !is.na(Pulse))
+# note that functions with the name "select" are found in several packages.  Writing dplyr::select makes sure that we are using the select() function in the dplyr package.
+
+# Note that you could combine these two lines into one using the pipe operator "%>%"  This pipes the result on the left of %>%  as the implied [but not explicitly stated] first argument in the function on the right
+# sub.NHANES=dplyr::select(NHANES,one_of(c('PhysActive','Pulse'))) %>% filter(!is.na(PhysActive) & !is.na(Pulse))
+
+# Make sure there are only two categories and if there are more, then filter the data down to 2.
+print(unique(sub.NHANES$PhysActive))
+# There are only 2
+# Otherwise we could do something like:
+sub.NHANES %<>% filter(PhysActive %in% c('No','Yes'))
+# x %<>% y(arguments) is the same as x = x %>% y(arguments) which is the same as x= y(x,arguments) which is the same as x %<>% y(.,arguments)  The '.' stands in for the missing explicity first argument
+
+```
+
+
+#### Hypothesis test:  is there an association between physical activity and pulse rate?
+```{r}
+# Null hypothesis - the means of the groups are the same -> the difference between the means of the groups is 0
+# Alternative hypothesis:  the means are different [two-sided]
+
+# How to test?  If there is actually no association (null hypothesis) then we can scramble one of the columns and there will still be no association. The pairing of a particular physical activity value with a particular pulse rate is inconsequential and arbitrary.
+
+# What would the distribution of differences in group means be if the pairing of pulse and activity values were purely random?
+
+dataGroupedByCategory=group_by(sub.NHANES,PhysActive)
+meansOfEachGroup=dplyr::summarize(dataGroupedByCategory,pulseMean=mean(Pulse))
+actualDifferenceInMeans=diff(meansOfEachGroup$pulseMean) # this ends up being (PhysActive:Yes - PhysActive:No)
+
+# Alternative  - all in one line
+#actualDifferenceInMeans=sub.NHANES %>% group_by(PhysActive) %>% dplyr::summarize(pulseMean=mean(Pulse)) %>% dplyr::summarize(meanDiff=diff(pulseMean)) %>% as.numeric()
+
+# Take a look at the means of each group.
+print(meansOfEachGroup)
+# Plot the data
+ggplot(sub.NHANES)+geom_violin(aes(x=PhysActive,y=Pulse))
+
+# What do you think? Significant association or not?
+
+
+# Make a single scrambled dataset and calculate the mean difference
+scrambledData = sub.NHANES
+scrambledData$PhysActive=sample(scrambledData$PhysActive,nrow(scrambledData),replace=FALSE)
+scrambledDifferenceInMeans=scrambledData %>% group_by(PhysActive) %>% dplyr::summarize(pulseMean=mean(Pulse)) %>% dplyr::summarize(meanDiff=diff(pulseMean)) %>% as.numeric()
+
+# But we want to do this many, many times and store the result each time to get a null distribution. There are several options for how to do this.  Here are two ways:
+
+nScrambles=1000
+
+# 1
+null.distribution1=numeric(nScrambles)
+for (i in 1:nScrambles){
+  scrambledData$PhysActive=sample(scrambledData$PhysActive,nrow(scrambledData),replace=FALSE)
+  null.distribution1[i]=scrambledData %>% group_by(PhysActive) %>% dplyr::summarize(pulseMean=mean(Pulse)) %>% dplyr::summarize(meanDiff=diff(pulseMean)) %>% as.numeric()
+}
+
+#2
+getAScrambledStatistic<-function(data){
+  data$PhysActive=sample(data$PhysActive,nrow(data),replace=FALSE)
+  scrambledDifferenceInMeans=data %>% group_by(PhysActive) %>% dplyr::summarize(pulseMean=mean(Pulse)) %>% dplyr::summarize(meanDiff=diff(pulseMean)) %>% as.numeric()
+  return(scrambledDifferenceInMeans)
+}
+null.distribution2=replicate(nScrambles,getAScrambledStatistic(sub.NHANES))
+
+# Plot the null distribution - [I plot them separately and then together to compare them]
+hist(null.distribution1,breaks=20,main='Null distribution from for loop',xlab='(mean of group Yes) - (mean of group No)')
+hist(null.distribution2,breaks=20,main='Null distribution from replicate(function)',xlab='(mean of group Yes) - (mean of group No)')
+
+#Plotting them together with ggplot requires making a new table with the null distribution values in one column and which null distribution they are from in another column
+ggplot(tbl_df(list(statisticValues=c(null.distribution1,null.distribution2),method=c(rep('for loop',nScrambles),rep('replicate(function)',nScrambles)))))+geom_density(aes(x=statisticValues,color=method))+scale_color_manual(values=c('darkolivegreen','green'))
+
+```
+
+#### Where does the actual statistic value in the null distribution? Remember that our alternative hypothesis was 2-sided
+
+```{r}
+# Use the null.distribution2
+p.value=sum(abs(actualDifferenceInMeans)<abs(null.distribution2))
+
+```
+
+#### p.value is 0 [strictly: p.value < (1/nScrambles)] meaning that the means of the two groups are significantly different
+
+
+#### We have now rejected the idea that the difference in means is 0.  But what is the actual difference in means between the two groups - not of our sample but in the larger population?  Estimate a confidence interval for it.  This time, we want to maintain the relationship between the variables so we don't scramble one of the columns.  Instead, sample the rows with replacement
+
+```{r}
+# Bootstrapping
+# Take a bootstrap sample
+# Equivalent ways:
+# 1. 
+boot1=dplyr::sample_n(sub.NHANES,nrow(sub.NHANES),replace=TRUE)
+
+#2 
+boot1=sub.NHANES[sample(1:nrow(sub.NHANES),nrow(sub.NHANES),replace=TRUE),]
+
+#3 [very slow because it uses a for loop]
+boot1=c()
+for (i in 1:nrow(sub.NHANES)){
+  boot1 %<>% bind_rows(sub.NHANES[sample(1:nrow(sub.NHANES),1),])
+}
+
+# 4.  There is a package called "boot"  This has a variety of useful functions for doing bootstrapping and analyzing boostrap distributions. Keep it in mind for doing bootstrapping for confidence interval estimation in the future
+
+# Calculate a boostrap statistic
+boot1.stat=boot1 %>% group_by(PhysActive) %>% dplyr::summarize(pulseMean=mean(Pulse)) %>% dplyr::summarize(meanDiff=diff(pulseMean)) %>% as.numeric()
+
+# Now make the sampling and the statistic calculating into a function to make it easy to do it many times
+
+calculateBootstrapStat<-function(dat){
+  boot.sample=dplyr::sample_n(dat,nrow(dat),replace=TRUE)
+  boot.stat=boot.sample %>% group_by(PhysActive) %>% dplyr::summarize(pulseMean=mean(Pulse)) %>% dplyr::summarize(meanDiff=diff(pulseMean)) %>% as.numeric()
+  return(boot.stat)
+}
+
+nBoots=1000
+bootstrap.distribution=replicate(nBoots,calculateBootstrapStat(sub.NHANES))
+hist(bootstrap.distribution,breaks=50)
+```
+
+
+#### Example of regression in R.  Conventional statistics for investigating the relationship between two quantitative variables are correlation and regression
+```{r}
+# Subset the NHANES dataset to two quantitative variables
+# Let's think about height and weight in the adult context, so exclude people less than 21 years old
+q2.NHANES=NHANES %>% filter(Age>=21) %>% dplyr::select(one_of(c('Height','DiabetesAge'))) %>% filter(!is.na(Height) & !is.na(DiabetesAge))
+
+# Regress Weight on Height:  does knowing the height of someone enable you to predict the weight?
+
+DiabetesAgeOnHeight=lm(Height~DiabetesAge,data=q2.NHANES)
+
+# Look at the result
+summary(DiabetesAgeOnHeight)
+
+# Extract information from the results.  Let's extract the slope of the regression line.
+# The result is an lm object. It has fields that can be accessed by "$" 
+
+#Type: DiabetesAgeOnHeight$ and then press tab
+DiabetesAgeOnHeight$coefficients
+ 
+# In this case we want the 2nd coefficient
+slope=unname(DiabetesAgeOnHeight$coefficients[2]) # unname() removes the name "DiabetesAge" from the coefficient so that it is just a number and not a named number
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
