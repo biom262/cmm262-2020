@@ -182,7 +182,17 @@ calculateBootstrapStat<-function(dat){
 
 nBoots=1000
 bootstrap.distribution=replicate(nBoots,calculateBootstrapStat(sub.NHANES))
-hist(bootstrap.distribution,breaks=50)
+
+# We can now use Rs 'quantile' function to see from where to where exactly a 95% confidence interval ranges:
+
+conf.int95 <- quantile(bootstrap.distribution, c(0.025, 0.975))
+conf.int95
+##        2.5%       97.5% 
+## -0.54799726  0.09194516
+
+hist(bootstrap.distribution, breaks = 50, main = 'Bootstrap distribution')
+abline(v = conf.int95[1], col = 'red')
+abline(v = conf.int95[2], col = 'red')
 ```
 
 
