@@ -1,0 +1,1 @@
+COLOR_WHITE_BROWN = ("#ebf6f7", "#181b26")

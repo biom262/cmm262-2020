@@ -1,0 +1,18 @@
+VCF_ANN_FIELDS = (
+    "ALT",
+    "effect",
+    "impact",
+    "gene_name",
+    "gene_id",
+    "feature_type",
+    "feature_id",
+    "transcript_biotype",
+    "rank",
+    "hgvsc",
+    "hgvsp",
+    "cdna_position",
+    "cds_position",
+    "protein_position",
+    "distance_to_feature",
+    "error",
+)
