@@ -1,0 +1,110 @@
+---
+title: "BIOM262 - Class 1 - Analysis of data from genome-wide association studies"
+output: html_notebook
+---
+
+## Exploring GWAS Summary statistics
+
+GWAS *summary statistics* are computed statistics like p-values and odds-ratios etc. that describe the associations between the genotype at a SNP and a trait of interest. This differs from *individual level* data, which is the complete set of genotypes and phenotypes for each individual. Summary statistics take up a lot less space, and also don't have the same privacy concerns that genotype data have.
+
+Read in summary statistics from a genome-wide association study of 
+Rheumatoid Arthritis. These data are from this study:
+https://www.nature.com/articles/nature12873
+
+
+```{r}
+gwas.tab <- read.table("RA_GWAS.txt", header=T)
+head(gwas.tab)
+```
+
+Note that these data have been thinned to reduce the size of the dataset for this class. Recent GWAS often include data from >10,000,000 SNPs. How many SNPs are in this data table?
+
+```{r}
+### your code here...
+```
+
+Let's take a look at the data. Make a histogram of the p-values.
+
+```{r}
+### your code here...
+```
+
+Notice that the distribution looks faily uniform, but with an excess of low
+p-values.
+
+A quantile-quantile plot provides a better way to see how the distribution deviates from the null-expection of uniformity. In addition, if we use -log10 p-values, we can really see what is going on the low-p-value tail of the distribution.
+
+
+```{r}
+# Step 1: get the observed p-values from the GWAS table
+
+### your code here
+
+# Step 2: create a vector containing the expected distribution of p-values under the null hypothesis.
+# Hint: the expected p-values are uniformly distributed between 0 and 1
+
+### your code here
+
+# Step 3: make a qqplot comparing the -log10 observed and -log10 expected p-values (see documentation for qqplot)
+
+### your code here...
+
+# Step 4: add a line with a slope of 1, to show what the p-values would look
+### your code here...
+
+
+```
+
+There are some very low p-values that make it difficult
+to see the relationship between the two distributions,
+so threshold p-values below 1e-20 to 1e-20.
+
+```{r}
+# Set all p-values below the threshold 1e-20 to the value 1e-20
+### Your code here... 
+
+# remake the qqplot
+### Your code here....
+```
+
+
+## Make a Manhattan plot
+
+Let's make a manhatten plot, which shows the association signal
+across the genome. 
+
+```{r}
+### Your code here...
+
+# Bonus make the colors of the points different for each chromosome
+
+```
+
+What is the region with the extremely low p-values?
+
+```{r}
+### Your code here...
+```
+
+Let's zoom in on this region.
+
+```{r}
+# Make a zoomed-in manhatten plot of the p-values just from the 
+# region with extremely low p-values
+### your code here...
+
+```
+
+*Q:* What region is this? (Can look in UCSC genome browser)
+
+
+This region has a super low p-value, which obscures other signals. Let's make the manhatten plot again, this time thresholding p-values to 1e-20.
+
+```{r}
+# make a new manhatten plot, thresholding p-values below 1e-20 to 1e-20
+### Your code here...
+
+```
+
+
+
