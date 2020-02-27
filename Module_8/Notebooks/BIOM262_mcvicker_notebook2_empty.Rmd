@@ -1,0 +1,250 @@
+---
+title: "BIOM262 - eQTL mapping"
+output: html_notebook
+---
+
+
+## Genotype data and sample information
+
+We will use genotyping data from the 1000 genomes project. Specifically we will use genotypes from Yoruba individuals from Nigeria
+
+### Read Samples
+
+Read in the identifiers of the samples. Each sample is an immortalized lymphoblastoid cell line derived from a different Yoruba individual. 
+
+```{r}
+# use 'as.characeter' to make sure we have the sample names as a vector of character strings (rather than
+# a factor)
+sample.tab <- read.table("samples.txt", header=F)
+sample.names <- as.character(sample.tab$V1)
+head(sample.names)
+```
+
+### Read Genotypes
+
+Read in SNP genotypes for each of the samples. For simplicity, we will only use SNPs on chromosome 22. The first 4 columns give information about the SNP, the remaining columns give the genotypes for each sample. The genotypes are coded as the number of copies of allele2 that each individual carries and can therefore be 0, 1, or 2. For convenience, also  create a 'genotype matrix' that only contains columns with genotype counts.
+
+
+```{r}
+genotypes.tab <- read.table("chr22_genotypes.txt", header=T)
+head(genotypes.tab)
+
+genotype.matrix <- genotypes.tab[,sample.names]
+head(genotype.matrix)
+
+```
+
+
+### Analyze genotype data
+
+Here are a few questions to get people familiar with the genotype data
+
+Q: How many samples are there?
+```{r}
+### Your code here...
+length(sample.names)
+```
+
+Q: what is the chromosomal position and alleles of SNP rs55926024? 
+```{r}
+### Your code here...
+genotypes.tab[genotypes.tab$SNP.ID=="rs55926024",]
+```
+
+
+Q: How many individuals are heterozygous for SNP rs55926024?
+
+```{r}
+### Your code here...
+snp.genos <- genotypes.tab[genotypes.tab$SNP.ID=="rs55926024", sample.names]
+sum(snp.genos == 1)
+```
+
+Q: What is the frequency of allele2 for rs55926024 in our samples?
+
+```{r}
+### Your code here...
+sum(snp.genos) / (length(snp.genos)*2)
+```
+
+
+### Gene expression data
+
+We will use RNA-seq gene expression data from the GEUVADIS project. The data are from the same Yoruba cell lines that we have genotypes for. The reads have already been mapped to the genome and the number of reads overlapping exons of Ensembl genes has computed.
+
+## Read RNA-seq counts data
+
+Read in mapped RNA-seq read counts for each gene. The first columns 5 give information about the gene. The subsequent columns that start with "NA" (e.g. NA18520) contain mapped read counts for  each sample in the study. 
+
+```{r}
+all.gene.tab <- read.table("gene_mapped_read_counts.txt", header=T)
+head(all.gene.tab)
+
+```
+
+## Compute TPM expression values
+Create an expression matrix containing transcripts-per-million (TPM) as a measure of gene expression. Could alternatively use RPKM
+
+Explanation of TPM from (see http://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/):
+1. Divide the read counts by the length of each gene in kilobases. 
+This gives you reads per kilobase (RPK).
+2. Count up all the RPK values in a sample and divide this number by 1,000,000. This is your “per million” scaling factor.
+3. Divide the RPK values by the “per million” scaling factor. This gives you TPM.
+
+
+```{r}
+all.count.matrix <- all.gene.tab[,sample.names]
+
+# compute RPK values for each gene (Divide the read counts by the length of each gene in kilobases)
+## Your code here...
+counts <- all.gene.tab[,sample.names]
+cdna.len <- all.gene.tab$GENE.CDNA.LEN
+rpk <- counts/(cdna.len*1000)
+
+# get column RPK totals (hint: try using apply function)
+## Your code here...
+rpk.col.totals <- apply(rpk, 2, sum)
+
+# divide each column by "per million"" scaling factor to get TPM
+scaling.factor <- rpk.col.totals / 1e6
+tpm <- t(t(rpk)/scaling.factor)
+## Your code here...
+```
+
+## Analyze gene expression values
+
+Q: How many genes are in the gene expression table?
+
+```{r}
+nrow(tpm)
+## Your code here...
+```
+
+This is a lot of 'genes'! The Ensembl 'ENSG' gene list contains many pseudo-genes, and low-expression lncRNAs etc.
+
+Calculate mean expression across samples, then make a histogram of log TPM values for genes that have 
+mean TPM > 0.0.
+
+```{r}
+mean.tpm <- apply(tpm, 1, mean)
+hist(log(mean.tpm[mean.tpm > 0.0]), breaks=50)
+```
+
+The mean expression distribution is bimodal, with a large number of low-expression genes.
+
+Q: How many genes have TPM values > 1.0?
+
+```{r}
+## Your code here...
+expressed.gene.tab <- tpm[mean.tpm > 1.0,]
+nrow(expressed.gene.tab)
+```
+
+This is a reasonable number of genes to consider expressed in this cell type (lymphoblastoid cell lines). So lets discard all genes with TPM < 1.0 from further analyses.
+
+## Other data pre-processing
+
+There are additional steps we could take when processing the gene expression and genotype data.
+
+- Correct for population structure by doing principal components analysis of genotype matrix (PCs could be used as co-variates in linear model)
+- Correct for expression batch effects by regressing out PCs, performing quantile normalization
+
+
+## identifying eQTLs
+
+Get a set of genes that are on chr22 and that have TPM > 1.0
+
+```{r}
+### Your code here
+f <- mean.tpm > 1.0 & all.gene.tab$CHROM=="chr22"
+chr22.expressed.gene.tab <- cbind(all.gene.tab[f,1:4], tpm[f,])
+head(chr22.expressed.gene.tab)
+```
+
+
+Plot the expression of gene ENSG00000218537 (MIF-AS1) as a function of the genotype of the SNP rs5760108. 
+
+```{r}
+### Your code here
+# 1. get TPM expression for gene ENSG00000218537
+tpm.gene.expr <- unlist(chr22.expressed.gene.tab[chr22.expressed.gene.tab$GENE.NAME=="ENSG00000218537",sample.names])
+
+# 2. get genotypes of SNP rs5760108
+genos <- unlist(genotype.matrix[genotypes.tab$SNP.ID=="rs5760108",])
+# 3. make scatterplot with genotypes on X axis, expression on Y axis
+plot(jitter(unlist(genos)), log(unlist(tpm.gene.expr)))
+```
+
+Fit a linear model, using expression as the response and genotype as the predictor
+
+```{r}
+### Your code here...
+### Hint: look or google how to use lm function in R
+model <- lm(tpm.gene.expr ~ genos)
+```
+
+Get the slope (often called effect size or Beta) and p-value from the regression, and add the fit line to the genotype vs. expression plot.
+
+```{r}
+### Your code here...
+### Hint: use the summary function to get information about the fitted linear model
+s <- summary(model)
+plot(jitter(genos), tpm.gene.expr)
+abline(a=s$coef[1], b=s$coef[2], col="red")
+s
+```
+
+Now lets test all SNPs that are close (within 50kb) of the gene ENSG00000218537 for association.
+
+First get the genotypes of all of the nearby SNPs.
+
+```{r}
+### Your code here...
+
+# 1. Define the start and end of a region
+# as the start of ENSG00000218537 - 50000 and the end of ENSG00000218537 + 50000
+gene.start <- chr22.expressed.gene.tab$GENE.START[chr22.expressed.gene.tab$GENE.NAME=="ENSG00000218537"]
+gene.end <- chr22.expressed.gene.tab$GENE.END[chr22.expressed.gene.tab$GENE.NAME=="ENSG00000218537"]
+
+start <- gene.start - 50000
+end <- gene.end + 50000
+
+# 2 get the SNPs out
+snp.rows <- which(genotypes.tab$CHROM.POS >= start & genotypes.tab$CHROM.POS <= end)
+
+# 3. get genotypes of the SNPs
+genos <- genotypes.tab[snp.rows,]
+
+# 4. how many SNPs are there in this region?
+nrow(genos)
+```
+
+Next perform linear regression of the genoypes of each SNP against the expression of the gene and make a histogram of the p-values.
+
+```{r}
+## Your code here...
+# 1.  use a for loop, to loop over the SNPs, fit a linear model for each one
+p.values <- c()
+for(i in 1:nrow(genos)) {
+  g <- unlist(genos[i, sample.names])
+  model <- lm(tpm.gene.expr ~ g)
+  s <- summary(model)
+  p.values[i] <- s$coefficients["g", "Pr(>|t|)"]
+}
+
+
+# 2. plot a histogram of the resulting p-values
+hist(p.values, breaks=50)
+```
+
+
+Plot the genomic position of the SNPs (x-axis) against their -log10 p-values (y-axis)
+
+
+```{r}
+### Your code here...
+plot(genos$CHROM.POS, -log10(p.values))
+
+```
+
+
