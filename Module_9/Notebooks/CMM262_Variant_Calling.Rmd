@@ -69,7 +69,7 @@ bcftools filter -s "DP20" -O z -e 'INFO/DP<20' ~/Module_9/results/CPTRES7vs4.fil
 
 Get some statistics
 ```{bash}
-bcftools stats ~/Module_9/results/CPTRES7vs4.germ.vcf.gz
+bcftools stats ~/Module_9/results/CPTRES7vs4.filtered.vcf.gz
 ```
 
 
