@@ -1,0 +1,317 @@
+---
+title: "Module9_2: Variant Calling"
+author: "Olivier HARISMENDY"
+output: html_notebook
+---
+
+
+
+### Generate pileup files
+
+```{r}
+
+```
+
+### Calling somatic variants
+
+
+```{bash}
+
+# trying to implement mutect
+java -jar ../software/gatk-4.1.0.0/gatk-package-4.1.0.0-local.jar CreateSequenceDictionary -R ../resources/chr21.fa.gz
+
+#cannot run mutect on loging node. Not enough RAM default. 
+#cannot index chr21
+# then Mutect does not like the sliceed bam
+java -Xmx2G -jar ../software/gatk-4.1.0.0/gatk-package-4.1.0.0-local.jar Mutect2 -R ../resources/chr21.fa.gz -I ../materials/CPTRES7.realigned.chr21.bam -I ../materials/CPTRES4.realigned.chr21.bam -tumor-sample CPTRES7:DS:CPTRES7 -normal-sample CPTRES4:DS:CPTRES4 -O CPTRES7vs4.vcf
+
+#teaching VARSCAN instead
+
+
+# generate pileup (without ref)
+samtools mpileup -Q 0 ~/biom262_2019/Module_9/materials/CPTRES7.chr21.realigned.bam -reference > ~/Module_9/results/CPTRES7.chr21.pileup
+samtools mpileup -Q 0 ~/biom262_2019/Module_9/materials/CPTRES4.chr21.realigned.bam > ~/Module_9/results/CPTRES4.chr21.pileup
+
+
+# call variants with Varscan (may need interactive node for RAM needs)
+java -Xmx2G -jar /path/to/varscan/VarScan.v2.3.9.jar somatic ~/Module_9/results/CPTRES4.chr21.pileup ~/Module_9/results_day2/CPTRES7.chr21.pileup CPTRES7vs4 --output-vcf
+```
+
+
+
+# expected output 
+Normal Pileup: /home/ucsd-train45/Module_9/results_day2/CPTRES4.chr21.pileup
+Tumor Pileup: /home/ucsd-train45/Module_9/results_day2/CPTRES7.chr21.pileup
+Min coverage:	8x for Normal, 6x for Tumor
+Min reads2:	2
+Min strands2:	1
+Min var freq:	0.2
+Min freq for hom:	0.75
+Normal purity:	1.0
+Tumor purity:	1.0
+Min avg qual:	15
+P-value thresh:	0.99
+Somatic p-value:	0.05
+1417403 positions in tumor
+1416817 positions shared in normal
+938572 had sufficient coverage for comparison
+937598 were called Reference
+0 were mixed SNP-indel calls and filtered
+957 were called Germline
+2 were called LOH
+14 were called Somatic
+1 were called Unknown
+0 were called Variant
+
+
+
+### Calling CNV
+
+CNV calling with CNVkit batch
+```{bash}
+
+
+path/to/cnvkit/cnvkit.py batch ~/biom262_2019/Module_9/materials/CPTRES7.chr21.realigned.bam --normal ~/biom262_2019/Module_9/materials/CPTRES4.chr21.realigned.bam --targets ~/biom262_2019/Module_9/resources/Sureselect.chr21.bed --annotate ~/biom262_2019/Module_9/resources/refFlat.txt --fasta ~/biom262_2019/Module_9/resources/chr21.fa.gz --access path/to/cnvkit/data/access-5k-mappable.hg19.bed --output-reference myref.cnn --output-dir ~/Module_9/results/ --diagram --scatter
+```
+
+
+expected output (takes long...): 
+
+CNVkit 0.9.6.dev0
+Detected file format: bed
+Splitting large targets
+Applying annotations as target names
+Detected file format: refflat
+Wrote ./Sureselect.chr21.target.bed with 2723 regions
+Detected file format: bed
+Skipping untargeted chromosomes chrM
+Wrote ./Sureselect.chr21.antitarget.bed with 19270 regions
+Building a copy number reference from normal samples...
+Processing reads in CPTRES4.chr21.bam
+Time: 2.010 seconds (171574 reads/sec, 1355 bins/sec)
+Summary: #bins=2723, #reads=344843, mean=126.6410, min=0.0, max=2087.56 
+Percent reads in regions: 54.972 (of 627313 mapped)
+Wrote ./CPTRES4.chr21.targetcoverage.cnn with 2723 regions
+Processing reads in CPTRES4.chr21.bam
+Time: 0.545 seconds (187281 reads/sec, 35383 bins/sec)
+Summary: #bins=19270, #reads=101996, mean=5.2930, min=0.0, max=2731.63 
+Percent reads in regions: 16.259 (of 627313 mapped)
+Wrote ./CPTRES4.chr21.antitargetcoverage.cnn with 19270 regions
+No chrX found in sample; is the input truncated?
+Relative log2 coverage of chrX=-0.455, chrY=-0.455 (maleness=0 x 300 = 0) --> assuming female
+Loading ./CPTRES4.chr21.targetcoverage.cnn
+Calculating GC and RepeatMasker content in ../resources/chr21.fa.gz ...
+Extracting sequences from chromosome chr21
+
+
+### visually check on IGV
+
+* load the bam (N=2), vcf and cnn files in IGV
+* check poitions that are somatic. For example chr21	34721886
+* Load dbSNP for comparison to germline. 
+* connect observation to content of the VCF file. Prepare for heuristic filtering
+
+
+### VCF file manipulation
+
+
+Let's merge the snp and indel files
+
+zip (bgzip) and index the vcf file
+```{bash}
+for file in ~/Module_9/results/CPTRES7vs4*vcf; do bgzip $file; tabix -p vcf $file.gz; done
+```
+
+Concatenate the snp and indel files
+```{bash}
+bcftools concat -O z -o ~/Module_9/results/CPTRES7vs4.vcf.gz ~/Module_9/results/CPTRES7vs4.snp.vcf.gz ~/Module_9/results/CPTRES7vs4.indel.vcf.gz
+```
+
+flag variants with coverage less than 20
+```{bash}
+bcftools filter -s "DP20" -O z -e 'INFO/DP<20' ~/Module_9/results/CPTRES7vs4.vcf.gz > ~/Module_9/results/CPTRES7vs4.filter.vcf.gz
+```
+
+keep PASS and germline
+```{bash}
+bcftools filter -O z -i 'FILTER=="PASS" & INFO/SS=="1"' ~/Module_9/results/CPTRES7vs4.filter.vcf.gz > ~/Module_9/results/CPTRES7vs4.germ.vcf.gz
+```
+
+What is the transition to transversion ratio?
+```{bash}
+bcftools stats ~/Module_9/results/CPTRES7vs4.germ.vcf.gz
+```
+
+
+### Variant Annotation
+
+For this part we will use the results of cphort germien sequencing (GATK HapotypeCaller). Note: genotype have been shuffled to preserve privacy. Note2: GATK was run on individual file, not cohort, hence no use of gVCF : missing are assumed homozygous reference. 
+
+Breakmulti allele sites
+```{bash}
+vcfbreakmulti ~/biom262_2019/Module_9/materials/GMTS_all.shuf.vcf.gz | bgzip -c >  ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz
+
+tabix -p vcf ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz
+```
+
+
+run Table annovar on the GMTS variant file. 
+```{bash}
+~/biom262_2019/Module_9/resources/annovar/table_annovar.pl --vcfinput --nastring . --protocol refGene --operation g --buildver hg19 --outfile ~/Module_9/results/GMTSann ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz ~/biom262_2019/Module_9/resources/annovar/humandb/
+```
+
+export genotypes to TSV file. One sample.variant per row. 
+```{bash}
+vcf2tsv -g ~/Module_9/results/materials/GMTS_all.shuf.BM.vcf.gz > GMTS.geno.txt
+```
+
+### Variant statistics in R
+
+
+#### Preparation
+Load the required packages
+
+```{r}
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+```
+
+
+Import the variant annotation data
+```{r}
+
+anno<-read.delim2("./results/myanno.21.txt",header=F)
+
+colnames(anno)<-c("chr","pos","raw_pos","ref","raw_ref","alt","raw_alt","mut_type","function","region_type","region_name","refGene.name","refGene.name2","dbSNP.name","ExAC_r0_3_sites_vep.name","ExAC_r0_3_sites_vep.AF","dbNSFP.SIFT_pred","dbNSFP.Polyphen2_HDIV_pred","dbNSFP.MutationTaster_pred","dbNSFP.MetaSVM_pred","dbNSFP.clinvar_clnsig","clinvar.CLNSIG")
+```
+
+clean up annot
+```{r}
+anno$chr<-paste0("chr",trimws(anno$chr))
+anno$raw_pos<-as.numeric(trimws(anno$raw_pos))
+anno$raw_ref<-trimws(anno$raw_ref)
+anno$raw_alt<-trimws(anno$raw_alt)
+
+```
+
+create a unique variant ID
+```{r}
+anno$varID<-paste(anno$chr,anno$raw_pos,anno$raw_ref,anno$raw_alt,sep=":")
+```
+
+
+Import genotypes
+```{r}
+geno<-read.delim2("./results/GMTS.geno.txt")
+
+colnames(geno)<-c("chr","raw_pos","id","raw_ref","raw_alt","qual","filter","AC","AF","AN","BaseQRankSum","ClippingRankSum","DP","DS","END","ExcessHet","FS","Hrun","HaplotypeScore","InbreedingCoeff","MLEAC","MLEAF","MQ","MQRankSum","QD","RAW_MQ","ReadPosRankSum","SOR","SAMPLE","AD","DP.1","GQ","GT","MIN_DP","PGT","PID","PL","RGQ","SB")
+```
+
+
+create a unique variant ID
+```{r}
+geno$varID<-paste(geno$chr,geno$raw_pos,geno$raw_ref,geno$raw_alt,sep=":")
+```
+
+add indel info
+```{r}
+geno<-geno %>% mutate(type=ifelse(nchar(as.character(raw_ref))>1 | nchar(as.character(raw_alt))>1,"indel","SNV"))
+```
+
+
+add sample IDs. 
+```{r}
+idxref<-read.delim2("./results/idxref.txt",sep=" ")
+colnames(idxref)<-c("sampleID","SAMPLE")
+
+geno<-left_join(geno,idxref)
+```
+
+import metadata
+```{r}
+meta<-read.delim2("./results/GMTS_metadata.txt")
+```
+
+
+
+#### Quality controls
+
+
+extract key quality metrics
+```{r}
+qual<-geno %>% select(varID,type,DP,FS,Hrun,MQ,QD)
+```
+
+Depth distribution
+```{r}
+ggplot(qual,aes(log10(as.numeric(DP)),col=type))+geom_density()
+```
+
+
+FisherStrand Bias distribution
+```{r}
+ggplot(qual,aes(as.numeric(FS),col=type))+geom_density()
+```
+
+count genoypes by GT categories
+```{r}
+geno %>% group_by(GT,type) %>% tally()
+```
+
+keep good genotype with low strand bias
+
+```{r}
+geno<-geno %>% filter(GT=="0/0" | GT=="0/1" | GT=="1/1") %>% filter(as.numeric(FS)<60) %>% filter(as.numeric(QD)>2)
+```
+
+
+remove all the variants no longer variants
+```{r}
+to_keep<-geno %>% filter(GT=="0/1" | GT=="1/1") %>% select(varID)
+geno<-geno %>% filter(varID %in% to_keep$varID)
+```
+
+recounting
+```{r}
+geno %>% group_by(GT,type) %>% tally()
+```
+
+
+
+#### Mutation burden
+
+Flag the deleterious variants
+```{r}
+
+table(anno$mut_type)
+
+anno<-anno %>% mutate(IsNonSilent=ifelse(mut_type=="stoploss" | mut_type=="stop_gain" | mut_type=="nonsynonymous SNV" | mut_type=="frameshit_deletion" | mut_type=="frameshift insertion","yes","no"))
+
+anno<-anno %>% mutate(IsNonSilent=ifelse(mut_type=="." & region_type=="splicing", "yes",IsNonSilent))
+
+
+```
+
+join deleterious with metadata
+
+```{r}
+del<-anno %>% filter(IsNonSilent=="yes")
+
+tmp<-left_join(geno,anno)
+```
+
+Compare the genetic burden for each gene between male and female
+```{r}
+
+```
+
+Plot the resultign volcano plot
+
+```{r}
+
+```
+
+
+
+
