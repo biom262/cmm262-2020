@@ -17,6 +17,14 @@ module load GenomeAnalysisTK
 
 ```
 
+### Generate coverage metrics
+
+```{bash}
+java -jar path/to/picard.jar CollectHsMetrics BAIT_INTERVALS=~/cmm262_shared/Module_9/resources/Sureselect.chr21.interval_list TARGET_INTERVALS=~/cmm262_shared/Module_9/resources/Sureselect.chr21.interval_list INPUT=~/cmm262_shared/Module_9/materials/FRFZ.chr21.hg19.bam OUTPUT=~/Module_9/results/FRFZ.chr21.hsmetrics.txt
+```
+
+Nexxt steps in R notebook
+
 
 ### Calling somatic variants
 
@@ -80,21 +88,23 @@ For this part we will use the results of GMTS cohort germline sequencing (GATK H
 Breakmulti allele sites
 ```{bash}
 vcfbreakmulti ~/cmm262_shared/Module_9/materials/GMTS_all.shuf.vcf.gz | bgzip -c >  ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz
-
-tabix -p vcf ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz
 ```
 
-run table annovar on the GMTS variant file 
+index the output
 ```{bash}
-~/cmm262_shared/Module_9/resources/annovar/table_annovar.pl --vcfinput --nastring . --protocol refGene --operation g --buildver hg19 --outfile ~/Module_9/results/GMTSann ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz ~/cmm262_shared/Module_9/resources/annovar/humandb/
+tabix -p vcf ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz
 ```
 
 export genotypes to TSV file. One sample.variant per row. 
 ```{bash}
-vcf2tsv -g ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz > GMTS.geno.txt
+vcf2tsv -g ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz > ~/Module_9/results/GMTS.geno.txt
 ```
 
-Next steps in R notebook
+run table annovar on the GMTS variant file to annotate the variants
+```{bash}
+~/cmm262_shared/Module_9/resources/annovar/table_annovar.pl --vcfinput --nastring . --protocol refGene --operation g --buildver hg19 --outfile ~/Module_9/results/GMTSann ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz ~/cmm262_shared/Module_9/resources/annovar/humandb/
+
+```
 
 
 
