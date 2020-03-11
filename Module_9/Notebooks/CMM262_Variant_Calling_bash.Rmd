@@ -1,0 +1,112 @@
+---
+title: "Variant Calling"
+author: "Olivier HARISMENDY"
+output: html_notebook
+---
+
+```{bash}
+# Make soft link to the shared resoures folder
+ln -s /oasis/tscc/scratch/biom200/cmm262/ ~/cmm262_shared
+
+# Make output directory
+mkdir -p ~/Module_9/results
+
+# Activate environment and load GATK module
+source activate cmm262-variant-calling
+module load GenomeAnalysisTK
+
+```
+
+### Generate coverage metrics
+
+```{bash}
+java -jar path/to/picard.jar CollectHsMetrics BAIT_INTERVALS=~/cmm262_shared/Module_9/resources/Sureselect.chr21.interval_list TARGET_INTERVALS=~/cmm262_shared/Module_9/resources/Sureselect.chr21.interval_list INPUT=~/cmm262_shared/Module_9/materials/FRFZ.chr21.hg19.bam OUTPUT=~/Module_9/results/FRFZ.chr21.hsmetrics.txt
+```
+
+Nexxt steps in R notebook
+
+
+### Calling somatic variants
+
+Mutect2 
+```{bash}
+
+
+# Had to submit as job, used these parameters:
+
+#!/bin/bash
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=06:00:00
+#PBS -V
+#PBS -N mutect_variant_call
+#PBS -o $PBS_JOBNAME.out
+#PBS -e $PBS_JOBNAME.err
+#PBS -M 
+#PBS -m ea
+#PBS -q hotel
+
+gatk Mutect2 -R ~/cmm262_shared/Module_9/resources/hg19.fa.gz \
+-I ~/cmm262_shared/Module_9/materials/CPTRES7.realigned.chr21.bam \
+-I ~/cmm262_shared/Module_9/materials/CPTRES4.realigned.chr21.bam \
+-tumor-sample CPTRES7:DS:CPTRES7 \
+-normal-sample CPTRES4:DS:CPTRES4 \
+-O ~/Module_9/results/CPTRES7vs4.vcf
+
+
+gatk FilterMutectCalls -R ~/cmm262_shared/Module_9/resources/hg19.fa.gz \
+-V ~/Module_9/results/CPTRES7vs4.vcf \
+-O ~/Module_9/results/CPTRES7vs4.filters.vcf
+
+```
+
+
+### VCF file manipulation
+
+
+zip (bgzip) and index the vcf file
+```{bash}
+for file in ~/Module_9/results/CPTRES7vs4*vcf; do bgzip $file; tabix -p vcf $file.gz; done
+```
+
+flag variants with coverage less than 20
+```{bash}
+
+module load bcftools
+bcftools filter -s "DP20" -O z -e 'INFO/DP<20' ~/Module_9/results/CPTRES7vs4.filters.vcf.gz > ~/Module_9/results/CPTRES7vs4.filtered.vcf.gz
+```
+
+Get some statistics
+```{bash}
+bcftools stats ~/Module_9/results/CPTRES7vs4.filtered.vcf.gz
+```
+
+
+### Variant Annotation
+
+For this part we will use the results of GMTS cohort germline sequencing (GATK HapotypeCaller). Note: genotype have been shuffled to preserve privacy. Note2: GATK was run on individual file, not cohort, hence no use of gVCF : missing are assumed homozygous reference. 
+
+Breakmulti allele sites
+```{bash}
+vcfbreakmulti ~/cmm262_shared/Module_9/materials/GMTS_all.shuf.vcf.gz | bgzip -c >  ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz
+```
+
+index the output
+```{bash}
+tabix -p vcf ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz
+```
+
+export genotypes to TSV file. One sample.variant per row. 
+```{bash}
+vcf2tsv -g ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz > ~/Module_9/results/GMTS.geno.txt
+```
+
+run table annovar on the GMTS variant file to annotate the variants
+```{bash}
+~/cmm262_shared/Module_9/resources/annovar/table_annovar.pl --vcfinput --nastring . --protocol refGene --operation g --buildver hg19 --outfile ~/Module_9/results/GMTSann ~/Module_9/results/GMTS_all.shuf.BM.vcf.gz ~/cmm262_shared/Module_9/resources/annovar/humandb/
+
+```
+
+
+
+
+

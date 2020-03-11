@@ -1,0 +1,291 @@
+---
+title: "Variant Calling"
+author: "Olivier HARISMENDY"
+output: html_notebook
+---
+
+
+### variant statistics in R
+
+
+#### Preparation
+Load the required packages
+
+```{r}
+library(tidyverse)
+# library(dplyr)
+# library(reshape2)
+# library(ggplot2)
+```
+
+
+## genotyping statistics
+
+### import and preparation
+
+
+Import genotypes
+```{r}
+geno<-read.delim2("./results/GMTS.geno.txt")
+colnames(geno)<-c("chr","raw_pos","id","raw_ref","raw_alt","qual","filter","AC","AF","AN","BaseQRankSum","ClippingRankSum","DP","DS","END","ExcessHet","FS","Hrun","HaplotypeScore","InbreedingCoeff","MLEAC","MLEAF","MQ","MQRankSum","QD","RAW_MQ","ReadPosRankSum","SOR","SAMPLE","AD","DP.1","GQ","GT","MIN_DP","PGT","PID","PL","RGQ","SB")
+```
+
+create a unique variant ID
+```{r}
+
+geno<-geno %>% 
+  mutate(varID=paste(chr,raw_pos,raw_ref,raw_alt,sep=":"))
+```
+
+add indel info
+```{r}
+geno<-geno %>% 
+  mutate(type=ifelse(nchar(as.character(raw_ref))>1 | nchar(as.character(raw_alt))>1,"indel","SNV"))
+```
+
+edit SAMPLE
+```{r}
+geno$SAMPLE<-as.character(geno$SAMPLE)
+```
+
+
+
+
+### general statistics
+
+number of variants
+```{r}
+geno %>% 
+  select(varID) %>% 
+  unique() %>% 
+  nrow()
+```
+
+number of samples
+```{r}
+geno %>% 
+  select(SAMPLE) %>% 
+  unique() %>% 
+  nrow()
+```
+
+number of genotypes 
+```{r}
+table(geno$GT)
+
+
+# or
+
+
+geno %>% 
+  group_by(GT) %>% 
+  tally()
+```
+
+remove ambiguous and hom ref genotypes
+```{r}
+geno<-geno %>% 
+  filter(GT=="0/1" | GT=="1/1")
+```
+
+
+getting allelic fraction
+
+```{r}
+geno<-geno %>% 
+  separate(AD,into=c("Rcnt","Acnt"),remove = F, convert=T) %>%
+  mutate(AF=Acnt/(Rcnt+Acnt))
+```
+
+
+number of variant of each GT and type per sample
+```{r}
+geno %>% select(SAMPLE,GT,type,varID) %>% 
+  unique() %>% 
+  group_by(SAMPLE,GT,type) %>% 
+  tally() 
+
+# or
+
+
+geno %>% select(SAMPLE,GT,type,varID) %>% 
+  unique() %>% 
+  group_by(SAMPLE,GT,type) %>% 
+  summarize(Nvariants=length(varID))
+
+```
+
+
+median number of each variant type per samples
+
+```{r}
+geno %>% select(SAMPLE,type,varID) %>% 
+  unique() %>% 
+  group_by(SAMPLE,type) %>% 
+  summarize(Nvariants=length(varID)) %>%
+  group_by(type) %>%
+  summarize(medVar=median(Nvariants),minVar=min(Nvariants),maxVar=max(Nvariants))
+```
+
+### annotation
+
+
+```{r}
+anno<-read.delim2("./results/myanno.21.txt",header=F)
+colnames(anno)<-c("chr","pos","raw_pos","ref","raw_ref","alt","raw_alt","mut_type","function","region_type","region_name","refGene.name","refGene.name2","dbSNP.name","ExAC_r0_3_sites_vep.name","ExAC_r0_3_sites_vep.AF","dbNSFP.SIFT_pred","dbNSFP.Polyphen2_HDIV_pred","dbNSFP.MutationTaster_pred","dbNSFP.MetaSVM_pred","dbNSFP.clinvar_clnsig","clinvar.CLNSIG")
+```
+
+clean up annotations by removing leading and trailing white spaces
+```{r}
+anno$chr<-paste0("chr",trimws(anno$chr))
+anno$raw_pos<-as.numeric(trimws(anno$raw_pos))
+anno$raw_ref<-trimws(anno$raw_ref)
+anno$raw_alt<-trimws(anno$raw_alt)
+anno$refGene.name2<-trimws(anno$refGene.name2)
+```
+
+
+general statistics
+
+create a unique variant ID
+```{r}
+anno<-anno %>% mutate(varID=paste(chr,raw_pos,raw_ref,raw_alt,sep=":"))
+```
+
+
+how many variants
+```{r}
+anno %>% select(varID) %>% unique() %>% nrow()
+```
+
+```{r}
+anno %>% group_by(mut_type,region_type) %>% tally()
+```
+
+flagging the delterious ones
+```{r}
+anno<-anno %>% mutate(isLOF=ifelse(grepl("frameshift",anno$mut_type) | 
+                  grepl("stop",anno$mut_type) | 
+                  (mut_type=="nonsynonymous SNV" & dbNSFP.MetaSVM_pred=="D")| 
+                    dbNSFP.clinvar_clnsig=="5" | 
+                  region_type=="splicing", "LOF","notLOF"))
+```
+
+count by LOF flag
+
+```{r}
+anno %>% group_by(isLOF) %>% tally()
+```
+
+#### plotting
+
+variants per gene
+
+```{r}
+ggplot(anno,aes(refGene.name2))+geom_bar()
+```
+
+identifying the top 20 genes
+```{r}
+topGenes<-anno %>% group_by(refGene.name2) %>% tally() %>% top_n(20,n) %>% select(refGene.name2)
+
+anno_top<-left_join(topGenes,anno)
+
+ggplot(anno_top,aes(refGene.name2))+geom_bar()
+```
+
+making it pretty. starting with aggregated numbers
+
+```{r fig.width=4, fig.height=3}
+anno_top<-anno %>% group_by(refGene.name2) %>% tally() %>% top_n(20,n) 
+
+ggplot(anno_top,aes(reorder(refGene.name2,n),n))+geom_bar(stat="identity")+
+  coord_flip()+
+  xlab("")+
+  ylab("N variants")+
+  theme_minimal()+
+  theme(axis.text.y = element_text(hjust=1))
+```
+
+#### joining both datasets
+
+```{r}
+geno_lite<-geno %>% select(varID,SAMPLE,type,qual,GT,Rcnt,Acnt,AF)
+anno_lite<-anno %>% select(varID,refGene.name2,mut_type,region_type,`function`,isLOF)
+data<-left_join(geno_lite,anno_lite)
+
+data$qual<-as.numeric(as.character(data$qual))
+```
+
+
+distribution of allelic fraction
+
+```{r}
+ggplot(data,aes(AF))+geom_histogram()
+```
+
+LOF burden per patient
+
+```{r}
+data %>% group_by(SAMPLE) %>% summarize(fracLOF=length(varID[isLOF=="LOF"])/length(varID))
+```
+
+```{r}
+dataS1<-data %>% filter(SAMPLE=="201849403")
+```
+
+comparing quality by type and GT
+```{r}
+ggplot(dataS1,aes(type,qual))+geom_boxplot()
+ggplot(dataS1,aes(type,qual))+geom_boxplot()+geom_jitter()
+ggplot(dataS1,aes(type,qual))+geom_boxplot(outlier.shape = NA)+geom_jitter(width=0.1)
+ggplot(dataS1,aes(type,qual))+geom_boxplot(outlier.shape = NA)+geom_jitter(width=0.1)+facet_wrap(~GT)
+```
+
+comapring AF and GT
+
+```{r}
+ggplot(dataS1,aes(Rcnt,Acnt))+geom_point()
+ggplot(dataS1,aes(Rcnt,Acnt,col=GT))+geom_point()
+```
+
+coverage depth distribution
+
+```{r}
+ggplot(data,aes(type,log10(Rcnt+Acnt)))+geom_violin()
+ggplot(data,aes(log10(Rcnt+Acnt),col=type))+stat_ecdf()
+ggplot(data,aes(log10(Rcnt+Acnt),col=type))+stat_ecdf()+ylab("Fraction of variants")
+```
+
+```{r}
+ggplot(data,aes(Rcnt+Acnt,col=type))+stat_ecdf()
+```
+
+
+
+bar-graph of variant type
+
+```{r}
+dataLOF<-data %>% filter(isLOF=="LOF") %>% mutate(mut_type=ifelse(region_type=="splicing","splicing",as.character(mut_type)))
+
+ggplot(dataLOF,aes(SAMPLE,fill=mut_type))+geom_bar()
+ggplot(dataLOF,aes(SAMPLE,fill=mut_type))+geom_bar()+theme(axis.text.x = element_blank())
+
+
+tmp<-dataLOF %>% group_by(SAMPLE) %>% tally() %>% arrange(-n)
+dataLOF$SAMPLE<-factor(dataLOF$SAMPLE,levels=tmp$SAMPLE)
+
+ggplot(dataLOF,aes(SAMPLE,fill=mut_type))+
+  geom_bar(color="white")+
+  theme(axis.text.x = element_blank())+
+  scale_fill_manual(values=c("purple",rep("red",3),rep("orange",3),"green","black","black"))
+
+
+ggplot(dataLOF,aes(SAMPLE,fill=mut_type))+
+  geom_bar(color="white",position="fill")+
+  theme(axis.text.x = element_blank())+
+  scale_fill_manual(values=c("purple",rep("red",3),rep("orange",3),"green","black","black"))
+```
+
+
+
